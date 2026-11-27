@@ -1,7 +1,17 @@
+#brooo theres so many imports
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.impute import SimpleImputer
+
 
 trainingdata = pd.read_csv('train.csv')
 
@@ -31,20 +41,14 @@ plt.ylabel("Number of Projects")
 
 plt.show()
 
-
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.impute import SimpleImputer
-
 drop_cols = [
     "hours_spent",
     "log_hours",
     "hours_bucket",
+    "project_id"
 ]
 
 X = trainingdata.drop(columns=drop_cols)
-y = trainingdata["hours_spent"]
 
 #X_test = test.drop(columns=["project_id"])
 
@@ -57,7 +61,11 @@ categorical_cols = X.select_dtypes(
 ).columns.tolist()
 
 numeric_pipeline = Pipeline([
-    ("imputer", SimpleImputer(strategy="median"))
+    ("imputer", SimpleImputer(
+        strategy="median",
+        add_indicator=True
+    )),
+    ("scaler", StandardScaler())
 ])
 
 categorical_pipeline = Pipeline([
@@ -70,5 +78,23 @@ preprocessor = ColumnTransformer([
     ("cat", categorical_pipeline, categorical_cols)
 ])
 
+y = trainingdata["log_hours"]
 
+numeric_model = Pipeline([
+    ("preprocessor", ColumnTransformer([
+        ("num", numeric_pipeline, numeric_cols)
+    ])),
+    ("regressor", LinearRegression())
+])
 
+numeric_model.fit(X[numeric_cols], y)
+
+#predictions = np.expm1(predictions)
+#predictions = np.clip(predictions, 0, 140.7)
+
+full_model = Pipeline([
+    ("preprocessor", preprocessor),
+    ("regressor", LinearRegression())
+])
+
+full_model.fit(X, y)
